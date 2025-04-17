@@ -133,15 +133,25 @@ function parseTimelineText(text: string): TimelineData {
   }
 }
 
+// 获取API地址，优先使用相对路径调用中间层
+function getApiUrl(apiConfig: ApiConfig, endpoint = 'chat'): string {
+  // 根据不同的端点返回不同的 API 路径
+  return `/api/${endpoint}`;
+}
+
 export async function fetchTimelineData(
   query: string,
   apiConfig: ApiConfig
 ): Promise<TimelineData> {
   try {
-    const { endpoint, model, apiKey } = apiConfig;
+    const { model, endpoint, apiKey } = apiConfig;
+    // 使用中间层API端点
+    const apiUrl = getApiUrl(apiConfig, 'chat');
 
     const payload = {
       model: model,
+      endpoint: endpoint, // 传递endpoint给后端
+      apiKey: apiKey, // 传递apiKey给后端
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `请为以下事件创建时间轴：${query}` }
@@ -150,11 +160,22 @@ export async function fetchTimelineData(
     };
 
     const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      'Content-Type': 'application/json'
     };
 
-    const response = await axios.post(endpoint, payload, { headers });
+    // 检查是否是使用环境变量配置
+    const isUsingEnvConfig =
+      model === "使用环境变量配置" ||
+      endpoint === "使用环境变量配置" ||
+      apiKey === "使用环境变量配置";
+
+    console.log('发送请求到服务器:', {
+      使用环境变量: isUsingEnvConfig,
+      端点: apiUrl,
+      模型: model
+    });
+
+    const response = await axios.post(apiUrl, payload, { headers });
 
     // 提取AI响应内容
     const content = response.data.choices[0].message.content;
@@ -173,10 +194,14 @@ export async function fetchEventDetails(
   apiConfig: ApiConfig
 ): Promise<string> {
   try {
-    const { endpoint, model, apiKey } = apiConfig;
+    const { model, endpoint, apiKey } = apiConfig;
+    // 使用新的 event-details 端点
+    const apiUrl = getApiUrl(apiConfig, 'event-details');
 
     const payload = {
       model: model,
+      endpoint: endpoint, // 传递endpoint给后端
+      apiKey: apiKey, // 传递apiKey给后端
       messages: [
         {
           role: "system",
@@ -213,11 +238,22 @@ export async function fetchEventDetails(
     };
 
     const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      'Content-Type': 'application/json'
     };
 
-    const response = await axios.post(endpoint, payload, { headers });
+    // 检查是否是使用环境变量配置
+    const isUsingEnvConfig =
+      model === "使用环境变量配置" ||
+      endpoint === "使用环境变量配置" ||
+      apiKey === "使用环境变量配置";
+
+    console.log('发送事件详情请求到服务器:', {
+      使用环境变量: isUsingEnvConfig,
+      端点: apiUrl,
+      模型: model
+    });
+
+    const response = await axios.post(apiUrl, payload, { headers });
 
     // 提取内容
     return response.data.choices[0].message.content;
